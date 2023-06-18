@@ -1,0 +1,18 @@
+{
+  "name": "sparse_matrix",
+  "version": "0.1.0",
+  "repo": "goodcleanfun/sparse_matrix",
+  "description": "Simple dynamic sparse matrices",
+  "keywords": ["matrix", "sparse", "array", "numeric"],
+  "dependencies": {
+    "goodcleanfun/vector": "*",
+    "goodcleanfun/num_arrays": "*"
+  },
+  "license": "MIT",
+  "src": [
+    "src/sparse_matrix.h",
+    "src/double_sparse_matrix.h",
+    "src/float_sparse_matrix.h"
+  ]
+}
+
