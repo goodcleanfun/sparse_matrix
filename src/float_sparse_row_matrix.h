@@ -4,6 +4,6 @@
 #include "sparse_matrix.h"
 #include "num_arrays/float_array.h"
 
-SPARSE_MATRIX_INIT(float_sparse_matrix, float, float_array)
+SPARSE_MATRIX_INIT(float_sparse_row_matrix, float, float_array, row, ROW)
 
 #endif
