@@ -1,18 +1,25 @@
 {
-  "name": "sparse_matrix",
+  "name": "sparse_matrices",
   "version": "0.1.0",
-  "repo": "goodcleanfun/sparse_matrix",
+  "repo": "goodcleanfun/sparse_matrices",
   "description": "Simple dynamic sparse matrices",
   "keywords": ["matrix", "sparse", "array", "numeric"],
   "dependencies": {
     "goodcleanfun/vector": "*",
+    "goodcleanfun/file_utils": "*",
+    "goodcleanfun/hashes": "*",
+    "goodcleanfun/heaps": "*",
+    "goodcleanfun/sorting": "*",
     "goodcleanfun/num_arrays": "*"
   },
   "license": "MIT",
   "src": [
-    "src/sparse_matrix.h",
-    "src/double_sparse_matrix.h",
-    "src/float_sparse_matrix.h"
-  ]
+    "src/compressed.h",
+    "src/csr.h",
+    "src/double_csr.h"
+  ],
+  "development": {
+    "silentbicycle/greatest": "1.5.0"
+  }
 }
 
