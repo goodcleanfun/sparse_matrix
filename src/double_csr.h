@@ -1,7 +1,7 @@
 #ifndef DOUBLE_CSR_MATRIX_H
 #define DOUBLE_CSR_MATRIX_H
 
-#include "sparse_matrix.h"
+#include "csr.h"
 #include "num_arrays/double_array.h"
 #include "num_arrays/uint32_array.h"
 
