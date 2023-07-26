@@ -1,2 +1,2 @@
-# sparse_matrix
+# sparse_matrices
 Simple dynamic sparse matrices
