@@ -117,7 +117,7 @@ typedef enum {
         free(self);                                                                                                         \
     }                                                                                                                       \
                                                                                                                             \
-    static inline name##_t *name##_new_shape(index_type m, index_type n) {                              \
+    static inline name##_t *name##_new_shape(index_type m, index_type n) {                                                  \
         name##_t *matrix = calloc(1, sizeof(name##_t));                                                                     \
         if (matrix == NULL) return NULL;                                                                                    \
         matrix->m = m;                                                                                                      \
@@ -171,15 +171,15 @@ typedef enum {
         if (index >= self->n) self->n = index + 1;                                                                          \
     }                                                                                                                       \
                                                                                                                             \
-    static inline void name##_append_##index_name(name##_t *self, index_type *indices, data_type *values, index_type n) {    \
-        for (index_type i = 0; i < n; i++) {                                                                      \
+    static inline void name##_append_##index_name(name##_t *self, index_type *indices, data_type *values, index_type n) {   \
+        for (index_type i = 0; i < n; i++) {                                                                                \
             name##_append(self, indices[i], values[i]);                                                                     \
         }                                                                                                                   \
         name##_finalize_##index_name(self);                                                                                 \
     }                                                                                                                       \
                                                                                                                             \
     typedef struct name##_index_value {                                                                                     \
-        index_type index;                                                                                         \
+        index_type index;                                                                                                   \
         data_type val;                                                                                                      \
     } name##_index_value_t;                                                                                                 \
                                                                                                                             \
@@ -188,7 +188,7 @@ typedef enum {
     INTROSORT_INIT(name##_index_value_array, name##_index_value_t, ks_lt_index_value)                                       \
                                                                                                                             \
     static inline void name##_sort_indices(name##_t *self) {                                                                \
-        index_type x, ind_start, ind_len, j;                                                                      \
+        index_type x, ind_start, ind_len, j;                                                                                \
                                                                                                                             \
         name##_index_value_array *index_vals = name##_index_value_array_new();                                              \
                                                                                                                             \
