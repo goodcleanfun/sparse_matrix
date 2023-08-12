@@ -1,6 +1,6 @@
 {
   "name": "sparse_matrices",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repo": "goodcleanfun/sparse_matrices",
   "description": "Simple dynamic sparse matrices",
   "keywords": ["matrix", "sparse", "array", "numeric"],
