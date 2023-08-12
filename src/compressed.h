@@ -97,9 +97,9 @@ typedef enum {
         index_array_type *indptr;                                                                                           \
         index_array_type *indices;                                                                                          \
         data_array_type *data;                                                                                              \
-    } name##_t;                                                                                                             \
+    } name;                                                                                                                 \
                                                                                                                             \
-    static inline void name##_destroy(name##_t *self) {                                                                     \
+    static inline void name##_destroy(name *self) {                                                                         \
         if (self == NULL) return;                                                                                           \
                                                                                                                             \
         if (self->indptr != NULL) {                                                                                         \
@@ -117,8 +117,8 @@ typedef enum {
         free(self);                                                                                                         \
     }                                                                                                                       \
                                                                                                                             \
-    static inline name##_t *name##_new_shape(index_type m, index_type n) {                                                  \
-        name##_t *matrix = calloc(1, sizeof(name##_t));                                                                     \
+    static inline name *name##_new_shape(index_type m, index_type n) {                                                      \
+        name *matrix = calloc(1, sizeof(name));                                                                             \
         if (matrix == NULL) return NULL;                                                                                    \
         matrix->m = m;                                                                                                      \
         matrix->n = n;                                                                                                      \
@@ -145,12 +145,12 @@ typedef enum {
         return NULL;                                                                                                        \
     }                                                                                                                       \
                                                                                                                             \
-    name##_t *name##_new(void) {                                                                                            \
+    name *name##_new(void) {                                                                                                \
         return name##_new_shape(0, 0);                                                                                      \
     }                                                                                                                       \
                                                                                                                             \
                                                                                                                             \
-    static inline void name##_clear(name##_t *self) {                                                                       \
+    static inline void name##_clear(name *self) {                                                                           \
         index_array_type##_clear(self->indptr);                                                                             \
         index_array_type##_push(self->indptr, 0);                                                                           \
                                                                                                                             \
@@ -158,20 +158,20 @@ typedef enum {
         data_array_type##_clear(self->data);                                                                                \
     }                                                                                                                       \
                                                                                                                             \
-    static inline void name##_finalize_##index_name(name##_t *self) {                                                       \
+    static inline void name##_finalize_##index_name(name *self) {                                                           \
         index_array_type##_push(self->indptr, (index_type)self->indices->n);                                                \
         if (self->indptr->n > self->m + 1) {                                                                                \
             self->m++;                                                                                                      \
         }                                                                                                                   \
     }                                                                                                                       \
                                                                                                                             \
-    static inline void name##_append(name##_t *self, index_type index, data_type val) {                                     \
+    static inline void name##_append(name *self, index_type index, data_type val) {                                         \
         index_array_type##_push(self->indices, index);                                                                      \
         data_array_type##_push(self->data, val);                                                                            \
         if (index >= self->n) self->n = index + 1;                                                                          \
     }                                                                                                                       \
                                                                                                                             \
-    static inline void name##_append_##index_name(name##_t *self, index_type *indices, data_type *values, index_type n) {   \
+    static inline void name##_append_##index_name(name *self, index_type *indices, data_type *values, index_type n) {       \
         for (index_type i = 0; i < n; i++) {                                                                                \
             name##_append(self, indices[i], values[i]);                                                                     \
         }                                                                                                                   \
@@ -187,7 +187,7 @@ typedef enum {
                                                                                                                             \
     INTROSORT_INIT(name##_index_value_array, name##_index_value_t, ks_lt_index_value)                                       \
                                                                                                                             \
-    static inline void name##_sort_indices(name##_t *self) {                                                                \
+    static inline void name##_sort_indices(name *self) {                                                                    \
         index_type x, ind_start, ind_len, j;                                                                                \
                                                                                                                             \
         name##_index_value_array *index_vals = name##_index_value_array_new();                                              \
@@ -208,16 +208,16 @@ typedef enum {
     }                                                                                                                       \
                                                                                                                             \
                                                                                                                             \
-    static inline bool name##_dot_vector(name##_t *self, data_type *vec, index_type n, data_type *result) {       \
+    static inline bool name##_dot_vector(name *self, data_type *vec, index_type n, data_type *result) {                     \
         if (n != self->n) return false;                                                                                     \
                                                                                                                             \
-        index_type x, ind_start, ind_len;                                                                         \
+        index_type x, ind_start, ind_len;                                                                                   \
         data_type val;                                                                                                      \
         data_type *data = self->data->a;                                                                                    \
                                                                                                                             \
         compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {                                                     \
             data_type sum = result[x];                                                                                      \
-            for (index_type y = ind_start; y < ind_start + ind_len; y++) {                                        \
+            for (index_type y = ind_start; y < ind_start + ind_len; y++) {                                                  \
                 sum += data[y] * vec[y];                                                                                    \
             }                                                                                                               \
             result[x] = sum;                                                                                                \
@@ -225,20 +225,20 @@ typedef enum {
         return true;                                                                                                        \
     }                                                                                                                       \
                                                                                                                             \
-    static inline bool name##_##index_name##s_dot_vector(name##_t *self, index_type *xs, index_type m, data_type *vec, index_type n, data_type *result) { \
+    static inline bool name##_##index_name##s_dot_vector(name *self, index_type *xs, index_type m, data_type *vec, index_type n, data_type *result) { \
         if (n != self->n) return false;                                                                                     \
                                                                                                                             \
-        index_type *indptr = self->indptr->a;                                                                     \
-        index_type *indices = self->indices->a;                                                                   \
+        index_type *indptr = self->indptr->a;                                                                               \
+        index_type *indices = self->indices->a;                                                                             \
         data_type *data = self->data->a;                                                                                    \
                                                                                                                             \
-        for (index_type i = 0; i < m; i++) {                                                                      \
-            index_type index = indices[i];                                                                        \
+        for (index_type i = 0; i < m; i++) {                                                                                \
+            index_type index = indices[i];                                                                                  \
                                                                                                                             \
             data_type sum = result[i];                                                                                      \
             if (index >= self->m) return false;                                                                             \
                                                                                                                             \
-            for (index_type j = indptr[index]; j < indptr[index+1]; j++) {                                        \
+            for (index_type j = indptr[index]; j < indptr[index+1]; j++) {                                                  \
                 sum += data[j] * vec[indices[j]];                                                                           \
             }                                                                                                               \
                                                                                                                             \
@@ -248,8 +248,8 @@ typedef enum {
         return 0;                                                                                                           \
     }                                                                                                                       \
                                                                                                                             \
-    static inline name##_t *name##_read(FILE *f) {                                                                          \
-        name##_t *sp = malloc(sizeof(name##_t));                                                                            \
+    static inline name *name##_read(FILE *f) {                                                                              \
+        name *sp = malloc(sizeof(name));                                                                                    \
         if (sp == NULL) return NULL;                                                                                        \
                                                                                                                             \
         sp->indptr = NULL;                                                                                                  \
@@ -325,7 +325,7 @@ typedef enum {
         return NULL;                                                                                                        \
     }                                                                                                                       \
                                                                                                                             \
-    static inline bool name##_write(name##_t *self, FILE *f) {                                                              \
+    static inline bool name##_write(name *self, FILE *f) {                                                                  \
         if (self == NULL || self->indptr == NULL || self->indices == NULL || self->data == NULL) {                          \
             return false;                                                                                                   \
         }                                                                                                                   \

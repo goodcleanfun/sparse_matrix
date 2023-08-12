@@ -11,9 +11,9 @@
 
 #define CSR_DOT_SPARSE(name, data_type, index_type, index_array_type, index_name, hash_type, heap_type)    \
     static inline bool name##_dot_sparse( \
-        name##_t *a, \
-        name##_t *b, \
-        name##_t **c \
+        name *a, \
+        name *b, \
+        name **c \
     ) { \
         index_type a_rows = a->m; \
         index_type a_cols = a->n; \
@@ -31,11 +31,11 @@
         index_type *b_indices = b->indices->a; \
         data_type *b_values = b->data->a; \
  \
-        name##_t *result = name##_new_shape(a_rows, b_cols); \
+        name *result = name##_new_shape(a_rows, b_cols); \
          \
         index_type nnz = 0; \
  \
-        hash_type##_hash_t *sums = hash_type##_hash_new(); \
+        hash_type##_hash *sums = hash_type##_hash_new(); \
         index_array_type *sorted_indices = index_array_type##_new(); \
  \
         for (index_type i = 0; i < a_rows; i++) { \
