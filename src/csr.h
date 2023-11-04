@@ -9,7 +9,7 @@
 #include "compressed.h"
 
 
-#define CSR_DOT_SPARSE(name, data_type, index_type, index_array_type, index_name, hash_type, heap_type)    \
+#define CSR_DOT_SPARSE_INIT(name, data_type, index_type, index_array_type, index_name, hash_type, heap_type)    \
     static inline bool name##_dot_sparse( \
         name *a, \
         name *b, \
