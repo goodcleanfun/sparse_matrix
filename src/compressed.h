@@ -5,7 +5,7 @@ sparse_matrices/compressed.h
 Dynamic compressed sparse row (CSR) or compressed sparse column (CSC)
 sparse matrix.
 
-These data_types of matrices arise often when representing graphs,
+These types of matrices arise often when representing graphs,
 term-document matrices in text collections, etc.
 
 The compressed sparse row format stores the following 3x7
@@ -19,7 +19,7 @@ with the following 3 arrays:
 
 indptr = { 0, 2, 4, 6 }
 indices = { 0, 4, 1, 5, 3, 6 }
-data = { 1.0, 1.0, 2.0 }
+data = { 1.0, 1.0, 1.0, 1.0, 2.0, 1.0 }
 
 For a given row i, the indices indptr[i] through indptr[i+1]
 denotes the number of nonzero columns in row i. The column
