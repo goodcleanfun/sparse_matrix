@@ -70,10 +70,10 @@
                 if (!hash_type##_hash_get(sums, nonzero_index, &sum_value)) { \
                     break; \
                 } \
-                hash_type##_hash_del(sums, nonzero_index); \
                 name##_append(result, nonzero_index, sum_value); \
                 nnz++; \
             } \
+            hash_type##_hash_clear(sums); \
             name##_finalize_##index_name(result); \
         } \
         hash_type##_hash_destroy(sums); \

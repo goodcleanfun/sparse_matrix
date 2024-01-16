@@ -1,6 +1,6 @@
 /*
-sparse_matrices/compressed.h
-----------------------------
+sparse/compressed.h
+-------------------
 
 Dynamic compressed sparse row (CSR) or compressed sparse column (CSC)
 sparse matrix.
