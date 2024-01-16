@@ -8,6 +8,6 @@
 #include "num_arrays/uint32_array.h"
 
 COMPRESSED_SPARSE_MATRIX_INIT(float_csr_matrix, float, float_array, row)
-CSR_DOT_SPARSE_INIT(float_csr_matrix, float, uint32_t, uint32_array, row, uint32_float, uint32_minheap)
+CSR_DOT_SPARSE(float_csr_matrix, float, uint32_t, uint32_array, row, uint32_float, uint32_minheap)
 
 #endif
