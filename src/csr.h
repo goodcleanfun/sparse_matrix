@@ -13,7 +13,8 @@
     static inline bool name##_dot_sparse( \
         name *a, \
         name *b, \
-        name **c \
+        name **c, \
+        bool sort_indices \
     ) { \
         index_type a_rows = a->m; \
         index_type a_cols = a->n; \
@@ -36,7 +37,10 @@
         index_type nnz = 0; \
  \
         hash_type##_hash *sums = hash_type##_hash_new(); \
-        index_array_type *sorted_indices = index_array_type##_new(); \
+        index_array_type *sorted_indices; \
+        if (sort_indices) { \
+            sorted_indices = index_array_type##_new(); \
+        } \
  \
         for (index_type i = 0; i < a_rows; i++) { \
             index_type head = 0; \
@@ -58,26 +62,38 @@
                     bool index_seen = false; \
                     hash_type##_hash_incr_by_exists(sums, b_index, a_value * b_value, &index_seen); \
  \
-                    if (!index_seen) { \
+                    if (sort_indices && !index_seen) { \
                         heap_type##_push(sorted_indices, b_index); \
                     } \
                 } \
             } \
  \
-            index_type nonzero_index; \
-            while (heap_type##_pop(sorted_indices, &nonzero_index)) { \
-                data_type sum_value; \
-                if (!hash_type##_hash_get(sums, nonzero_index, &sum_value)) { \
-                    break; \
+            if (sort_indices) { \
+                index_type nonzero_index; \
+                while (heap_type##_pop(sorted_indices, &nonzero_index)) { \
+                    data_type sum_value; \
+                    if (!hash_type##_hash_get(sums, nonzero_index, &sum_value)) { \
+                        break; \
+                    } \
+                    name##_append(result, nonzero_index, sum_value); \
+                    nnz++; \
                 } \
-                name##_append(result, nonzero_index, sum_value); \
-                nnz++; \
+            } else { \
+                size_t i = 0; \
+                index_type key; \
+                data_type value; \
+                kh_foreach(sums, key, value, { \
+                    name##_append(result, key, value); \
+                    nnz++; \
+                }); \
             } \
             hash_type##_hash_clear(sums); \
             name##_finalize_##index_name(result); \
         } \
         hash_type##_hash_destroy(sums); \
-        index_array_type##_destroy(sorted_indices); \
+        if (sort_indices) { \
+            index_array_type##_destroy(sorted_indices); \
+        } \
         *c = result; \
  \
         return true; \
