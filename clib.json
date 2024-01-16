@@ -1,8 +1,8 @@
 {
-  "name": "sparse_matrices",
+  "name": "compressed_sparse",
   "version": "0.2.0",
-  "repo": "goodcleanfun/sparse_matrices",
-  "description": "Simple dynamic sparse matrices",
+  "repo": "goodcleanfun/compressed_sparse",
+  "description": "Compressed dynamic sparse matrices with efficient heap-based sparse multiply",
   "keywords": ["matrix", "sparse", "array", "numeric"],
   "dependencies": {
     "goodcleanfun/vector": "*",
@@ -12,14 +12,15 @@
     "goodcleanfun/sorting": "*",
     "goodcleanfun/num_arrays": "*"
   },
+  "development": {
+    "silentbicycle/greatest": "*"
+  },
   "license": "MIT",
   "src": [
     "src/compressed.h",
     "src/csr.h",
-    "src/double_csr.h"
-  ],
-  "development": {
-    "silentbicycle/greatest": "1.5.0"
-  }
+    "src/double_csr.h",
+    "src/float_csr.h"
+  ]
 }
 
