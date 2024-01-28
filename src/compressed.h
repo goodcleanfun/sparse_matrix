@@ -41,18 +41,14 @@ and dot products with vectors dense matrices, and other sparse
 matrices are efficient.
 */
 
-#ifndef COMPRESSED_SPARSE_MATRIX_H
-#define COMPRESSED_SPARSE_MATRIX_H
+#ifndef COMPRESSED_SPARSE_H
+#define COMPRESSED_SPARSE_H
 
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "vector/vector.h"
 #include "file_utils/file_utils.h"
-#include "sorting/introsort.h"
-
-#define ks_lt_index_value(a, b) ((a).index < (b).index)
 
 typedef enum {
     ROW,
@@ -60,324 +56,600 @@ typedef enum {
 } sparse_matrix_orientation_t;
 
 
-#define compressed_sparse_matrix_foreach(sp, indptr_var, index_var, length_var, code) {                                 \
-    __typeof__(indptr_var) _ind_start = 0;                                                                              \
-    __typeof__(indptr_var) _ind_end = 0;                                                                                \
-    __typeof__(indptr_var) *_indptr = sp->indptr->a;                                                                    \
-    __typeof__(indptr_var) _m = sp->m;                                                                                  \
-                                                                                                                        \
-    for (__typeof__(indptr_var) _i = 0; _i < _m; _i++) {                                                                \
-        (indptr_var) = _i;                                                                                              \
-        _ind_start = _indptr[_i];                                                                                       \
-        _ind_end = _indptr[_i + 1];                                                                                     \
-        (index_var) = _ind_start;                                                                                       \
-        (length_var) = _ind_end - _ind_start;                                                                           \
-        code;                                                                                                           \
-    }                                                                                                                   \
+#define compressed_sparse_matrix_foreach(sp, indptr_var, start_var, length_var, code) do {      \
+    __typeof__(indptr_var) ind_start = 0;                                                       \
+    __typeof__(indptr_var) ind_end = 0;                                                         \
+    __typeof__(indptr_var) *indptr = sp->indptr->a;                                             \
+    __typeof__(indptr_var) m = sp->m;                                                           \
+                                                                                                \
+    for (__typeof__(indptr_var) i = 0; i < m; i++) {                                            \
+        (indptr_var) = i;                                                                       \
+        ind_start = indptr[i];                                                                  \
+        ind_end = indptr[i + 1];                                                                \
+        (start_var) = ind_start;                                                                \
+        (length_var) = ind_end - ind_start;                                                     \
+        code;                                                                                   \
+    }                                                                                           \
+} while(0);
+
+#define compressed_sparse_matrix_foreach_value(sp, x_var, y_var, data_var, code) do {           \
+    __typeof__(y_var) *indices = sp->indices->a;                                                \
+    __typeof__(data_var) *data = sp->data->a;                                                   \
+    __typeof__(x_var) index, length;                                                            \
+                                                                                                \
+    compressed_sparse_matrix_foreach(sp, x_var, index, length, {                                \
+        for (__typeof__(x_var) j = index; j < index + length; j++) {                            \
+            (y_var) = indices[j];                                                               \
+            (data_var) = data[j];                                                               \
+            code;                                                                               \
+        }                                                                                       \
+    })                                                                                          \
+} while(0);
+
+#endif // COMPRESSED_SPARSE_H
+
+#ifndef SPARSE_TYPE_NAME
+#error "SPARSE_TYPE_NAME must be defined"
+#endif
+
+#ifndef SPARSE_INDEX_TYPE
+#error "SPARSE_INDEX_TYPE must be defined"
+#endif
+
+#ifndef SPARSE_INDEX_TYPE_NAME
+#define SPARSE_INDEX_TYPE_NAME SPARSE_INDEX_TYPE
+#define SPARSE_INDEX_TYPE_NAME_DEFINED
+#endif
+
+#ifndef SPARSE_ORIENTATION
+#error "SPARSE_ORIENTATION must be defined"
+#endif
+
+#ifndef SPARSE_DATA_TYPE
+#error "SPARSE_DATA_TYPE must be defined"
+#endif
+
+#ifndef SPARSE_DATA_TYPE_NAME
+#define SPARSE_DATA_TYPE_NAME SPARSE_DATA_TYPE
+#define SPARSE_DATA_TYPE_NAME_DEFINED
+#endif
+
+#define SPARSE_COMPRESSED_CONCAT_(a, b) a ## b
+#define SPARSE_COMPRESSED_CONCAT(a, b) SPARSE_COMPRESSED_CONCAT_(a, b)
+#define SPARSE_COMPRESSED_CONCAT3_(a, b, c) a ## b ## c
+#define SPARSE_COMPRESSED_CONCAT3(a, b, c) SPARSE_COMPRESSED_CONCAT3_(a, b, c)
+#define SPARSE_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME, _##name)
+#define SPARSE_TYPE_NAME_ORIENTATION SPARSE_COMPRESSED_CONCAT3(SPARSE_TYPE_NAME, _, SPARSE_ORIENTATION)
+#define SPARSE_INDICES_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME_ORIENTATION, s_##name)
+#define SPARSE_ORIENTATION_FUNC(name) SPARSE_COMPRESSED_CONCAT3(SPARSE_TYPE_NAME, _##name##_, SPARSE_ORIENTATION)
+
+#ifndef SPARSE_HASH_TYPE
+#define SPARSE_HASH_TYPE SPARSE_COMPRESSED_CONCAT3(SPARSE_INDEX_TYPE_NAME, _, SPARSE_DATA_TYPE_NAME)
+#define SPARSE_HASH_TYPE_DEFINED
+#endif
+
+#ifndef SPARSE_HEAP_TYPE
+#define SPARSE_HEAP_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_INDEX_TYPE_NAME, _minheap)
+#define SPARSE_HEAP_TYPE_DEFINED
+#endif
+
+#define HASH_NAME SPARSE_COMPRESSED_CONCAT(SPARSE_HASH_TYPE, _hash)
+#define HASH_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_HASH_TYPE, _hash_##name)
+#define HEAP_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_HEAP_TYPE, _##name)
+
+#ifndef SPARSE_INDEX_ARRAY_TYPE
+#define SPARSE_INDEX_ARRAY_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_INDEX_TYPE_NAME, _array)
+#define SPARSE_INDEX_ARRAY_TYPE_DEFINED
+#endif
+
+#define INDEX_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(SPARSE_INDEX_TYPE_NAME, _vector, _##name)
+
+#ifndef SPARSE_DATA_ARRAY_TYPE
+#define SPARSE_DATA_ARRAY_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_DATA_TYPE_NAME, _array)
+#define SPARSE_DATA_ARRAY_TYPE_DEFINED
+#endif
+
+#define DATA_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(SPARSE_DATA_TYPE_NAME, _vector, _##name)
+#define INDEX_ARRAY_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_INDEX_ARRAY_TYPE, _##name)
+#define DATA_ARRAY_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_DATA_ARRAY_TYPE, _##name)
+#define FILE_INDEX_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(name##_, SPARSE_INDEX_TYPE_NAME, _vector)
+#define FILE_DATA_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(name##_, SPARSE_DATA_TYPE_NAME, _vector)
+
+
+typedef struct {
+    size_t m;
+    size_t n;
+    SPARSE_INDEX_ARRAY_TYPE *indptr;
+    SPARSE_INDEX_ARRAY_TYPE *indices;
+    SPARSE_DATA_ARRAY_TYPE *data;
+} SPARSE_TYPE_NAME;
+
+
+static inline void SPARSE_FUNC(destroy)(SPARSE_TYPE_NAME *self) {
+    if (self == NULL) return;
+
+    if (self->indptr != NULL) {
+        INDEX_ARRAY_FUNC(destroy)(self->indptr);
+    }
+
+    if (self->indices != NULL) {
+        INDEX_ARRAY_FUNC(destroy)(self->indices);
+    }
+
+    if (self->data != NULL) {
+        DATA_ARRAY_FUNC(destroy)(self->data);
+    }
+
+    free(self);
 }
 
-#define compressed_sparse_matrix_foreach_value(sp, x_var, y_var, data_var, code) {                                      \
-    __typeof__(y_var) *_indices = sp->indices->a;                                                                       \
-    __typeof__(data_var) *_data = sp->data->a;                                                                          \
-    __typeof__(x_var) _index, _length;                                                                                  \
-    compressed_sparse_matrix_foreach(sp, x_var, _index, _length, {                                                      \
-        for (__typeof__(x_var) _j = _index; _j < _index + _length; _j++) {                                              \
-            (y_var) = _indices[_j];                                                                                     \
-            (data_var) = _data[_j];                                                                                     \
-            code;                                                                                                       \
-        }                                                                                                               \
-    })                                                                                                                  \
-}                                                                                                                       \
+static inline SPARSE_TYPE_NAME *SPARSE_FUNC(new_shape)(SPARSE_INDEX_TYPE m, SPARSE_INDEX_TYPE n) {
+    SPARSE_TYPE_NAME *sp = calloc(1, sizeof(SPARSE_TYPE_NAME));
+    if (sp == NULL) return NULL;
+    sp->m = m;
+    sp->n = n;
+    sp->indptr = INDEX_ARRAY_FUNC(new_size)(m + 1);
+    if (sp->indptr == NULL) {
+        goto exit_sparse_allocated;
+    }
+    INDEX_ARRAY_FUNC(push)(sp->indptr, 0);
+
+    sp->indices = INDEX_ARRAY_FUNC(new)();
+    if (sp->indices == NULL) {
+        goto exit_sparse_allocated;
+    }
+
+    sp->data = DATA_ARRAY_FUNC(new)();
+    if (sp->data == NULL) {
+        goto exit_sparse_allocated;
+    }
+
+    return sp;
+
+exit_sparse_allocated:
+    SPARSE_FUNC(destroy)(sp);
+    return NULL;
+}
+
+static inline SPARSE_TYPE_NAME *SPARSE_FUNC(new)(void) {
+    return SPARSE_FUNC(new_shape)(0, 0);
+}
 
 
-#define COMPRESSED_SPARSE_MATRIX_INIT_SIZE(name, data_type, data_array_type, index_size, index_type, index_array_type, index_name)      \
-    typedef struct {                                                                                                        \
-        index_type m;                                                                                                       \
-        index_type n;                                                                                                       \
-        index_array_type *indptr;                                                                                           \
-        index_array_type *indices;                                                                                          \
-        data_array_type *data;                                                                                              \
-    } name;                                                                                                                 \
-                                                                                                                            \
-    static inline void name##_destroy(name *self) {                                                                         \
-        if (self == NULL) return;                                                                                           \
-                                                                                                                            \
-        if (self->indptr != NULL) {                                                                                         \
-            index_array_type##_destroy(self->indptr);                                                                       \
-        }                                                                                                                   \
-                                                                                                                            \
-        if (self->indices != NULL) {                                                                                        \
-            index_array_type##_destroy(self->indices);                                                                      \
-        }                                                                                                                   \
-                                                                                                                            \
-        if (self->data != NULL) {                                                                                           \
-            data_array_type##_destroy(self->data);                                                                          \
-        }                                                                                                                   \
-                                                                                                                            \
-        free(self);                                                                                                         \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline name *name##_new_shape(index_type m, index_type n) {                                                      \
-        name *matrix = calloc(1, sizeof(name));                                                                             \
-        if (matrix == NULL) return NULL;                                                                                    \
-        matrix->m = m;                                                                                                      \
-        matrix->n = n;                                                                                                      \
-        matrix->indptr = index_array_type##_new_size(m + 1);                                                                \
-        if (matrix->indptr == NULL) {                                                                                       \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-        index_array_type##_push(matrix->indptr, 0);                                                                         \
-                                                                                                                            \
-        matrix->indices = index_array_type##_new();                                                                         \
-        if (matrix->indices == NULL) {                                                                                      \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        matrix->data = data_array_type##_new();                                                                             \
-        if (matrix->data == NULL) {                                                                                         \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        return matrix;                                                                                                      \
-                                                                                                                            \
-    exit_##name##_allocated:                                                                                                \
-        name##_destroy(matrix);                                                                                             \
-        return NULL;                                                                                                        \
-    }                                                                                                                       \
-                                                                                                                            \
-    name *name##_new(void) {                                                                                                \
-        return name##_new_shape(0, 0);                                                                                      \
-    }                                                                                                                       \
-                                                                                                                            \
-                                                                                                                            \
-    static inline void name##_clear(name *self) {                                                                           \
-        index_array_type##_clear(self->indptr);                                                                             \
-        index_array_type##_push(self->indptr, 0);                                                                           \
-                                                                                                                            \
-        index_array_type##_clear(self->indices);                                                                            \
-        data_array_type##_clear(self->data);                                                                                \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline void name##_finalize_##index_name(name *self) {                                                           \
-        index_array_type##_push(self->indptr, (index_type)self->indices->n);                                                \
-        if (self->indptr->n > self->m + 1) {                                                                                \
-            self->m++;                                                                                                      \
-        }                                                                                                                   \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline void name##_append(name *self, index_type index, data_type val) {                                         \
-        index_array_type##_push(self->indices, index);                                                                      \
-        data_array_type##_push(self->data, val);                                                                            \
-        if (index >= self->n) self->n = index + 1;                                                                          \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline void name##_append_##index_name(name *self, index_type *indices, data_type *values, index_type n) {       \
-        for (index_type i = 0; i < n; i++) {                                                                                \
-            name##_append(self, indices[i], values[i]);                                                                     \
-        }                                                                                                                   \
-        name##_finalize_##index_name(self);                                                                                 \
-    }                                                                                                                       \
-                                                                                                                            \
-    typedef struct name##_index_value {                                                                                     \
-        index_type index;                                                                                                   \
-        data_type val;                                                                                                      \
-    } name##_index_value_t;                                                                                                 \
-                                                                                                                            \
-    VECTOR_INIT(name##_index_value_array, name##_index_value_t)                                                             \
-                                                                                                                            \
-    INTROSORT_INIT(name##_index_value_array, name##_index_value_t, ks_lt_index_value)                                       \
-                                                                                                                            \
-    static inline void name##_sort_indices(name *self) {                                                                    \
-        index_type x, ind_start, ind_len, j;                                                                                \
-                                                                                                                            \
-        name##_index_value_array *index_vals = name##_index_value_array_new();                                              \
-                                                                                                                            \
-        compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {                                                     \
-            for (j = ind_start; j < ind_start + ind_len; j++) {                                                             \
-                name##_index_value_array_push(index_vals, (name##_index_value_t){self->indices->a[j], self->data->a[j]});   \
-            }                                                                                                               \
-            ks_introsort(name##_index_value_array, index_vals->n, index_vals->a);                                           \
-                                                                                                                            \
-            for (j = 0; j < index_vals->n; j++) {                                                                           \
-                name##_index_value_t ind_val = index_vals->a[j];                                                            \
-                self->indices->a[ind_start + j] = ind_val.index;                                                            \
-                self->data->a[ind_start + j] = ind_val.val;                                                                 \
-            }                                                                                                               \
-        })                                                                                                                  \
-                                                                                                                            \
-    }                                                                                                                       \
-                                                                                                                            \
-                                                                                                                            \
-    static inline bool name##_dot_vector(name *self, data_type *vec, index_type n, data_type *result) {                     \
-        if (n != self->n) return false;                                                                                     \
-                                                                                                                            \
-        index_type x, ind_start, ind_len;                                                                                   \
-        data_type val;                                                                                                      \
-        data_type *data = self->data->a;                                                                                    \
-                                                                                                                            \
-        compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {                                                     \
-            data_type sum = result[x];                                                                                      \
-            for (index_type y = ind_start; y < ind_start + ind_len; y++) {                                                  \
-                sum += data[y] * vec[y];                                                                                    \
-            }                                                                                                               \
-            result[x] = sum;                                                                                                \
-        })                                                                                                                  \
-        return true;                                                                                                        \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline bool name##_##index_name##s_dot_vector(name *self, index_type *xs, index_type m, data_type *vec, index_type n, data_type *result) { \
-        if (n != self->n) return false;                                                                                     \
-                                                                                                                            \
-        index_type *indptr = self->indptr->a;                                                                               \
-        index_type *indices = self->indices->a;                                                                             \
-        data_type *data = self->data->a;                                                                                    \
-                                                                                                                            \
-        for (index_type i = 0; i < m; i++) {                                                                                \
-            index_type index = indices[i];                                                                                  \
-                                                                                                                            \
-            data_type sum = result[i];                                                                                      \
-            if (index >= self->m) return false;                                                                             \
-                                                                                                                            \
-            for (index_type j = indptr[index]; j < indptr[index+1]; j++) {                                                  \
-                sum += data[j] * vec[indices[j]];                                                                           \
-            }                                                                                                               \
-                                                                                                                            \
-            result[i] = sum;                                                                                                \
-                                                                                                                            \
-        }                                                                                                                   \
-        return 0;                                                                                                           \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline name *name##_read(FILE *f) {                                                                              \
-        name *sp = malloc(sizeof(name));                                                                                    \
-        if (sp == NULL) return NULL;                                                                                        \
-                                                                                                                            \
-        sp->indptr = NULL;                                                                                                  \
-        sp->indices = NULL;                                                                                                 \
-        sp->data = NULL;                                                                                                    \
-                                                                                                                            \
-        if (!file_read_uint##index_size(f, &sp->m) ||                                                                       \
-            !file_read_uint##index_size(f, &sp->n)) {                                                                       \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        uint64_t len_indptr;                                                                                                \
-                                                                                                                            \
-        if (!file_read_uint64(f, &len_indptr)) {                                                                            \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        index_array_type *indptr = index_array_type##_new_size((size_t)len_indptr);                                         \
-        if (indptr == NULL) {                                                                                               \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        if (!file_read_##index_array_type(f, indptr->a, len_indptr)) {                                                      \
-            index_array_type##_destroy(indptr);                                                                             \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        indptr->n = (size_t)len_indptr;                                                                                     \
-        sp->indptr = indptr;                                                                                                \
-                                                                                                                            \
-        uint64_t len_indices;                                                                                               \
-                                                                                                                            \
-        if (!file_read_uint64(f, &len_indices)) {                                                                           \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        index_array_type *indices = index_array_type##_new_size((size_t)len_indices);                                       \
-        if (indices == NULL) {                                                                                              \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        if (!file_read_##index_array_type(f, indices->a, len_indices)) {                                                    \
-            index_array_type##_destroy(indices);                                                                            \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        indices->n = (size_t)len_indices;                                                                                   \
-        sp->indices = indices;                                                                                              \
-                                                                                                                            \
-        uint64_t len_data;                                                                                                  \
-                                                                                                                            \
-        if (!file_read_uint64(f, &len_data)) {                                                                              \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        data_array_type *data = data_array_type##_new_size((size_t)len_data);                                               \
-        if (data == NULL) {                                                                                                 \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        if (!file_read_##data_type##_array(f, data->a, len_data)) {                                                         \
-            data_array_type##_destroy(data);                                                                                \
-            goto exit_##name##_allocated;                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        data->n = (size_t)len_data;                                                                                         \
-        sp->data = data;                                                                                                    \
-                                                                                                                            \
-        return sp;                                                                                                          \
-                                                                                                                            \
-    exit_##name##_allocated:                                                                                                \
-        name##_destroy(sp);                                                                                                 \
-        return NULL;                                                                                                        \
-    }                                                                                                                       \
-                                                                                                                            \
-    static inline bool name##_write(name *self, FILE *f) {                                                                  \
-        if (self == NULL || self->indptr == NULL || self->indices == NULL || self->data == NULL) {                          \
-            return false;                                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        if (!file_write_uint##index_size(f, self->m) ||                                                                     \
-            !file_write_uint##index_size(f, self->n)) {                                                                     \
-            return false;                                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        uint64_t len_indptr = self->indptr->n;                                                                              \
-                                                                                                                            \
-        if (!file_write_uint64(f, len_indptr)) {                                                                            \
-            return false;                                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        for (int i = 0; i < len_indptr; i++) {                                                                              \
-            if (!file_write_uint##index_size(f, self->indptr->a[i])) {                                                      \
-                return false;                                                                                               \
-            }                                                                                                               \
-        }                                                                                                                   \
-                                                                                                                            \
-        uint64_t len_indices = (uint64_t)self->indices->n;                                                                  \
-                                                                                                                            \
-        if (!file_write_uint64(f, len_indices)) {                                                                           \
-            return false;                                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        for (int i = 0; i < len_indices; i++) {                                                                             \
-            if (!file_write_uint##index_size(f, self->indices->a[i])) {                                                     \
-                return false;                                                                                               \
-            }                                                                                                               \
-        }                                                                                                                   \
-                                                                                                                            \
-        uint64_t len_data = (uint64_t)self->data->n;                                                                        \
-                                                                                                                            \
-        if (!file_write_uint64(f, len_data)) {                                                                              \
-            return false;                                                                                                   \
-        }                                                                                                                   \
-                                                                                                                            \
-        for (int i = 0; i < len_data; i++) {                                                                                \
-            if (!file_write_##data_type(f, self->data->a[i])) {                                                             \
-                return false;                                                                                               \
-            }                                                                                                               \
-        }                                                                                                                   \
-                                                                                                                            \
-        return true;                                                                                                        \
-    }                                                                                                                       \
+static inline void SPARSE_FUNC(clear)(SPARSE_TYPE_NAME *self) {
+    INDEX_ARRAY_FUNC(clear)(self->indptr);
+    INDEX_ARRAY_FUNC(push)(self->indptr, 0);
+
+    INDEX_ARRAY_FUNC(clear)(self->indices);
+    DATA_ARRAY_FUNC(clear)(self->data);
+}
+
+static inline void SPARSE_ORIENTATION_FUNC(finalize)(SPARSE_TYPE_NAME *self) {
+    INDEX_ARRAY_FUNC(push)(self->indptr, (SPARSE_INDEX_TYPE)self->indices->n);
+    if (self->indptr->n > self->m + 1) {
+        self->m++;
+    }
+}
+
+static inline SPARSE_INDEX_TYPE SPARSE_FUNC(rows)(SPARSE_TYPE_NAME *self) {
+    return self->m;
+}
+
+static inline SPARSE_INDEX_TYPE SPARSE_FUNC(cols)(SPARSE_TYPE_NAME *self) {
+    return self->n;
+}
+
+static inline SPARSE_INDEX_TYPE SPARSE_FUNC(nnz)(SPARSE_TYPE_NAME *self) {
+    return self->data->n;
+}
+
+static inline SPARSE_INDEX_TYPE SPARSE_ORIENTATION_FUNC(len)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE ind) {
+    if (ind >= self->m) return 0;
+    return self->indptr->a[ind + 1] - self->indptr->a[ind];
+}
+
+static inline void SPARSE_FUNC(append)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE index, SPARSE_DATA_TYPE val) {
+    INDEX_ARRAY_FUNC(push)(self->indices, index);
+    DATA_ARRAY_FUNC(push)(self->data, val);
+    if (index >= self->n) self->n = index + 1;
+}
+
+static inline void SPARSE_ORIENTATION_FUNC(append)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE *indices, SPARSE_DATA_TYPE *values, SPARSE_INDEX_TYPE n) {
+    for (SPARSE_INDEX_TYPE i = 0; i < n; i++) {
+        SPARSE_FUNC(append)(self, indices[i], values[i]);
+    }
+    SPARSE_ORIENTATION_FUNC(finalize)(self);
+}
+
+#define SPARSE_INDEX_VALUE_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME, _index_value)
+#define SPARSE_INDEX_VALUE_SORT_FUNC(name) SPARSE_COMPRESSED_CONCAT(name##_, SPARSE_INDEX_VALUE_TYPE)
+
+typedef struct {
+    SPARSE_INDEX_TYPE index;
+    SPARSE_DATA_TYPE value;
+} SPARSE_INDEX_VALUE_TYPE;
+
+#define INTROSORT_TYPE SPARSE_INDEX_VALUE_TYPE
+#define INTROSORT_LT(a, b) ((a).index < (b).index)
+#include "sorting/introsort.h"
+#undef INTROSORT_TYPE
+#undef INTROSORT_LT
+
+static inline void SPARSE_FUNC(sort_indices)(SPARSE_TYPE_NAME *self) {
+    SPARSE_INDEX_TYPE x, ind_start, ind_len;
+
+    size_t max_len = 0;
+    for (size_t i = 0; i < self->m; i++) {
+        size_t len = self->indptr->a[i+1] - self->indptr->a[i];
+        if (len > max_len) max_len = len;
+    }
+
+    SPARSE_INDEX_VALUE_TYPE *tmp_index_values = malloc(sizeof(SPARSE_INDEX_VALUE_TYPE) * max_len);
+
+    compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {
+        for (size_t j = 0; j < ind_len; j++) {
+            SPARSE_INDEX_VALUE_TYPE tmp;
+            tmp.index = self->indices->a[ind_start + j];
+            tmp.value = self->data->a[ind_start + j];
+            tmp_index_values[j] = tmp;
+        }
+        SPARSE_INDEX_VALUE_SORT_FUNC(introsort)(ind_len, tmp_index_values);
+        for (size_t j = 0; j < ind_len; j++) {
+            self->indices->a[ind_start + j] = tmp_index_values[j].index;
+            self->data->a[ind_start + j] = tmp_index_values[j].value;
+        }
+    })
+    free(tmp_index_values);
+
+}
+
+static inline bool SPARSE_FUNC(dot_vector)(SPARSE_TYPE_NAME *self, SPARSE_DATA_TYPE *vec, size_t n, SPARSE_DATA_TYPE *result, size_t result_size) {
+    if (n != self->n || result_size != self->m) return false;
+
+    SPARSE_INDEX_TYPE x, ind_start, ind_len;
+    SPARSE_DATA_TYPE val;
+    SPARSE_INDEX_TYPE *indices = self->indices->a;
+    SPARSE_DATA_TYPE *data = self->data->a;
+
+    #pragma omp parallel for
+    compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {
+        SPARSE_DATA_TYPE sum = result[x];
+        for (SPARSE_INDEX_TYPE y = ind_start; y < ind_start + ind_len; y++) {
+            SPARSE_INDEX_TYPE col = indices[y];
+            sum += data[y] * vec[col];
+        }
+        result[x] = sum;
+    })
+    return true;
+}
+
+/* rows_dot_vector or cols_dot_vector */
+static inline bool SPARSE_INDICES_FUNC(dot_vector)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE *xs, size_t m, SPARSE_DATA_TYPE *vec, size_t n, SPARSE_DATA_TYPE *result, size_t result_size) {
+    if (n != self->n || m != result_size) return false;
+
+    SPARSE_INDEX_TYPE *indptr = self->indptr->a;
+    SPARSE_INDEX_TYPE *indices = self->indices->a;
+    SPARSE_DATA_TYPE *data = self->data->a;
+
+    #pragma omp parallel for
+    for (SPARSE_INDEX_TYPE i = 0; i < m; i++) {
+        SPARSE_INDEX_TYPE index = xs[i];
+
+        SPARSE_DATA_TYPE sum = result[i];
+        if (index >= self->m) return false;
+
+        for (SPARSE_INDEX_TYPE j = indptr[index]; j < indptr[index + 1]; j++) {
+            SPARSE_INDEX_TYPE col = indices[j];
+            sum += data[j] * vec[col];
+        }
+
+        result[i] = sum;
+    }
+    return true;
+}
+
+
+static inline bool SPARSE_FUNC(dot_sparse)(
+    SPARSE_TYPE_NAME *a,
+    SPARSE_TYPE_NAME *b,
+    SPARSE_TYPE_NAME *c,
+    bool sort_indices
+) {
+    SPARSE_INDEX_TYPE a_rows = a->m;
+    SPARSE_INDEX_TYPE a_cols = a->n;
+    SPARSE_INDEX_TYPE b_rows = b->m;
+    SPARSE_INDEX_TYPE b_cols = b->n;
+
+    if (a_cols != b_rows) {
+        return false;
+    }
+
+    SPARSE_INDEX_TYPE *a_indptr = a->indptr->a;
+    SPARSE_INDEX_TYPE *a_indices = a->indices->a;
+    SPARSE_DATA_TYPE *a_values = a->data->a;
+    SPARSE_INDEX_TYPE *b_indptr = b->indptr->a;
+    SPARSE_INDEX_TYPE *b_indices = b->indices->a;
+    SPARSE_DATA_TYPE *b_values = b->data->a;
+
+    if (c == NULL) return false;
+
+    if (c->indices->n > 0) {
+        SPARSE_FUNC(clear)(c);
+    }
+    if (c->indptr->n > 0) {
+        INDEX_ARRAY_FUNC(clear)(c->indptr);
+        INDEX_ARRAY_FUNC(push)(c->indptr, 0);
+    }
+    if (c->data->n > 0) {
+        DATA_ARRAY_FUNC(clear)(c->data);
+    }
+    c->m = a_rows;
+    c->n = b_cols;
+
+    SPARSE_INDEX_TYPE nnz = 0;
+
+    HASH_NAME *sums = HASH_FUNC(new)();
+    SPARSE_INDEX_ARRAY_TYPE *sorted_indices;
+    if (sort_indices) {
+        sorted_indices = INDEX_ARRAY_FUNC(new)();
+    }
+
+    for (SPARSE_INDEX_TYPE i = 0; i < a_rows; i++) {
+        SPARSE_INDEX_TYPE head = 0;
+        SPARSE_INDEX_TYPE length = 0;
+
+        SPARSE_INDEX_TYPE a_ind_start = a_indptr[i];
+        SPARSE_INDEX_TYPE a_ind_end = a_indptr[i+1];
+
+        for (SPARSE_INDEX_TYPE j = a_ind_start; j < a_ind_end; j++) {
+            SPARSE_INDEX_TYPE a_index = a_indices[j];
+            SPARSE_DATA_TYPE a_value = a_values[j];
+
+            SPARSE_INDEX_TYPE b_ind_start = b_indptr[a_index];
+            SPARSE_INDEX_TYPE b_ind_end = b_indptr[a_index+1];
+
+            for (SPARSE_INDEX_TYPE k = b_ind_start; k < b_ind_end; k++) {
+                SPARSE_INDEX_TYPE b_index = b_indices[k];
+                SPARSE_DATA_TYPE b_value = b_values[k];
+                bool index_seen = false;
+                HASH_FUNC(incr_by_exists)(sums, b_index, a_value * b_value, &index_seen);
+
+                if (sort_indices && !index_seen) {
+                    HEAP_FUNC(push)(sorted_indices, b_index);
+                }
+            }
+        }
+
+        if (sort_indices) {
+            SPARSE_INDEX_TYPE nonzero_index;
+            while (HEAP_FUNC(pop)(sorted_indices, &nonzero_index)) {
+                SPARSE_DATA_TYPE sum_value;
+                if (!(HASH_FUNC(get)(sums, nonzero_index, &sum_value))) {
+                    break;
+                }
+                SPARSE_FUNC(append)(c, nonzero_index, sum_value);
+                nnz++;
+            }
+        } else {
+            size_t i = 0;
+            SPARSE_INDEX_TYPE key;
+            SPARSE_DATA_TYPE value;
+            kh_foreach(sums, key, value, {
+                SPARSE_FUNC(append)(c, key, value);
+                nnz++;
+            });
+        }
+        HASH_FUNC(clear)(sums);
+        SPARSE_ORIENTATION_FUNC(finalize)(c);
+    }
+    HASH_FUNC(destroy)(sums);
+    if (sort_indices) {
+        INDEX_ARRAY_FUNC(destroy)(sorted_indices);
+    }
+
+    return true;
+}
 
 
 
-#define COMPRESSED_SPARSE_MATRIX_INIT(name, data_type, data_array_type, index_name) \
-COMPRESSED_SPARSE_MATRIX_INIT_SIZE(name, data_type, data_array_type, 32, uint32_t, uint32_array, index_name)
+
+static inline SPARSE_TYPE_NAME *SPARSE_FUNC(read)(FILE *f) {
+    SPARSE_TYPE_NAME *sp = malloc(sizeof(SPARSE_TYPE_NAME));
+    if (sp == NULL) return NULL;
+
+    sp->indptr = NULL;
+    sp->indices = NULL;
+    sp->data = NULL;
+
+    uint64_t m = 0;
+    uint64_t n = 0;
+
+    if (!file_read_uint64(f, &m) ||
+        !file_read_uint64(f, &n)) {
+        goto exit_read_sparse_allocated;
+    }
+
+    sp->m = (size_t)m;
+    sp->n = (size_t)n;
+
+    uint64_t len_indptr;
+
+    if (!file_read_uint64(f, &len_indptr)) {
+        goto exit_read_sparse_allocated;
+    }
+
+    SPARSE_INDEX_ARRAY_TYPE *indptr = INDEX_ARRAY_FUNC(new_size)((size_t)len_indptr);
+    if (indptr == NULL) {
+        goto exit_read_sparse_allocated;
+    }
+
+    if (!FILE_INDEX_VECTOR_FUNC(file_read)(f, indptr->a, len_indptr)) {
+        INDEX_ARRAY_FUNC(destroy)(indptr);
+        goto exit_read_sparse_allocated;
+    }
+
+    indptr->n = (size_t)len_indptr;
+    sp->indptr = indptr;
+
+    uint64_t len_indices;
+
+    if (!file_read_uint64(f, &len_indices)) {
+        goto exit_read_sparse_allocated;
+    }
+
+    SPARSE_INDEX_ARRAY_TYPE *indices = INDEX_ARRAY_FUNC(new_size)((size_t)len_indices);
+    if (indices == NULL) {
+        goto exit_read_sparse_allocated;
+    }
+
+    if (!FILE_INDEX_VECTOR_FUNC(file_read)(f, indices->a, len_indices)) {
+        INDEX_ARRAY_FUNC(destroy)(indices);
+        goto exit_read_sparse_allocated;
+    }
+
+    indices->n = (size_t)len_indices;
+    sp->indices = indices;
+
+    uint64_t len_data;
+
+    if (!file_read_uint64(f, &len_data)) {
+        goto exit_read_sparse_allocated;
+    }
+
+    SPARSE_DATA_ARRAY_TYPE *data = DATA_ARRAY_FUNC(new_size)((size_t)len_data);
+    if (data == NULL) {
+        goto exit_read_sparse_allocated;
+    }
+
+    if (!FILE_DATA_VECTOR_FUNC(file_read)(f, data->a, len_data)) {
+        DATA_ARRAY_FUNC(destroy)(data);
+        goto exit_read_sparse_allocated;
+    }
+
+    data->n = (size_t)len_data;
+    sp->data = data;
+
+    return sp;
+
+exit_read_sparse_allocated:
+    SPARSE_FUNC(destroy)(sp);
+    return NULL;
+}
+
+static inline bool SPARSE_FUNC(write)(SPARSE_TYPE_NAME *self, FILE *f) {
+    if (self == NULL || self->indptr == NULL || self->indices == NULL || self->data == NULL) {
+        return false;
+    }
+
+    if (!file_write_uint64(f, self->m) ||
+        !file_write_uint64(f, self->n)) {
+        return false;
+    }
+
+    uint64_t len_indptr = self->indptr->n;
+
+    if (!file_write_uint64(f, len_indptr)) {
+        return false;
+    }
+
+    if (!FILE_INDEX_VECTOR_FUNC(file_write)(f, self->indptr->a, len_indptr)) {
+        return false;
+    }
+
+    uint64_t len_indices = (uint64_t)self->indices->n;
+
+    if (!file_write_uint64(f, len_indices)) {
+        return false;
+    }
+
+    if (!FILE_INDEX_VECTOR_FUNC(file_write)(f, self->indices->a, len_indices)) {
+        return false;
+    }
+
+    uint64_t len_data = (uint64_t)self->data->n;
+
+    if (!file_write_uint64(f, len_data)) {
+        return false;
+    }
+
+    if (!FILE_DATA_VECTOR_FUNC(file_write)(f, self->data->a, len_data)) {
+        return false;
+    }
+
+    return true;
+}
 
 
+
+#ifndef SPARSE_TYPE_NAME
+#error "SPARSE_TYPE_NAME must be defined"
 #endif
+
+#ifndef SPARSE_INDEX_TYPE
+#error "SPARSE_INDEX_TYPE must be defined"
+#endif
+
+#ifndef SPARSE_INDEX_TYPE_NAME
+#define SPARSE_INDEX_TYPE_NAME SPARSE_INDEX_TYPE
+#define SPARSE_INDEX_TYPE_NAME_DEFINED
+#endif
+
+#ifndef SPARSE_ORIENTATION
+#error "SPARSE_ORIENTATION must be defined"
+#endif
+
+#ifndef SPARSE_DATA_TYPE
+#error "SPARSE_DATA_TYPE must be defined"
+#endif
+
+#ifndef SPARSE_DATA_TYPE_NAME
+#define SPARSE_DATA_TYPE_NAME SPARSE_DATA_TYPE
+#define SPARSE_DATA_TYPE_NAME_DEFINED
+#endif
+
+#ifndef SPARSE_HASH_TYPE
+#define SPARSE_HASH_TYPE SPARSE_COMPRESSED_CONCAT3(SPARSE_INDEX_TYPE_NAME, _, SPARSE_DATA_TYPE_NAME)
+#define SPARSE_HASH_TYPE_DEFINED
+#endif
+
+#ifndef SPARSE_HEAP_TYPE
+#define SPARSE_HEAP_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_INDEX_TYPE_NAME, _minheap)
+#define SPARSE_HEAP_TYPE_DEFINED
+#endif
+
+#undef SPARSE_COMPRESSED_CONCAT_
+#undef SPARSE_COMPRESSED_CONCAT
+#undef SPARSE_COMPRESSED_CONCAT3_
+#undef SPARSE_COMPRESSED_CONCAT3
+#undef SPARSE_FUNC
+#undef SPARSE_TYPE_NAME_ORIENTATION
+#undef SPARSE_INDICES_FUNC
+#undef SPARSE_ORIENTATION_FUNC
+
+#ifdef SPARSE_INDEX_TYPE_NAME_DEFINED
+#undef SPARSE_INDEX_TYPE_NAME
+#undef SPARSE_INDEX_TYPE_NAME_DEFINED
+#endif
+
+#ifdef SPARSE_DATA_TYPE_NAME_DEFINED
+#undef SPARSE_DATA_TYPE_NAME
+#undef SPARSE_DATA_TYPE_NAME_DEFINED
+#endif
+
+#ifdef SPARSE_HASH_TYPE_DEFINED
+#undef SPARSE_HASH_TYPE
+#undef SPARSE_HASH_TYPE_DEFINED
+#endif
+
+#ifdef SPARSE_HEAP_TYPE_DEFINED
+#undef SPARSE_HEAP_TYPE
+#undef SPARSE_HEAP_TYPE_DEFINED
+#endif
+
+#undef SPARSE_INDEX_VALUE_TYPE
+#undef HASH_NAME
+#undef HASH_FUNC
+#undef INDEX_ARRAY_FUNC
+#undef DATA_ARRAY_FUNC
+#undef FILE_INDEX_VECTOR_FUNC
+#undef FILE_DATA_VECTOR_FUNC
