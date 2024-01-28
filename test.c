@@ -26,7 +26,10 @@ TEST test_float_csr(void) {
     float_csr_append_row(sp, indices_2, values_2, sizeof(indices_2) / sizeof(uint32_t));
 
     ASSERT_EQ(sp->m, 2);
+    ASSERT_EQ(float_csr_rows(sp), 2);
     ASSERT_EQ(sp->n, 6);
+    ASSERT_EQ(float_csr_cols(sp), 6);
+    ASSERT_EQ(sp->max_nnz, 4);
     ASSERT_EQ(sp->indices->n, 7);
     ASSERT_EQ(sp->data->n, 7);
     for (uint32_t i = sizeof(indices_1) / sizeof(uint32_t); i < sp->n; i++) {
@@ -81,6 +84,30 @@ TEST test_float_csr(void) {
 
     ASSERT(float_csr_dot_sparse(sp, sp2, sp_prod_sp2, false));
 
+    ASSERT_EQ(sp_prod_sp2->m, 3);
+    ASSERT_EQ(sp_prod_sp2->n, 2);
+
+    row = 0;
+    uint32_t col = 0;
+    float data = 0.0;
+
+    uint32_t expected_indptr[] = {0, 2, 4, 6};
+    uint32_t expected_indices[] = {0, 1, 0, 1, 0, 1};
+    float expected_data[] = {6.0, 12.0, 4.0, 13.0, 5.0, 17.0};
+
+    size_t indptr_size = sizeof(expected_indptr) / sizeof(uint32_t);
+    size_t indices_size = sizeof(expected_indices) / sizeof(uint32_t);
+    size_t data_size = sizeof(expected_data) / sizeof(float);
+
+    for (size_t i = 0; i < indptr_size; i++) {
+        ASSERT_EQ(sp_prod_sp2->indptr->a[i], expected_indptr[i]);
+    }
+    for (size_t i = 0; i < indices_size; i++) {
+        ASSERT_EQ(sp_prod_sp2->indices->a[i], expected_indices[i]);
+    }
+    for (size_t i = 0; i < data_size; i++) {
+        ASSERT_EQ(sp_prod_sp2->data->a[i], expected_data[i]);
+    }
 
     float_array_destroy(vec);
     float_array_destroy(res);
