@@ -73,14 +73,12 @@ typedef enum {
 } while(0);
 
 #define compressed_sparse_matrix_foreach_value(sp, x_var, y_var, data_var, code) do {           \
-    __typeof__(y_var) *indices = sp->indices->a;                                                \
-    __typeof__(data_var) *data = sp->data->a;                                                   \
     __typeof__(x_var) index, length;                                                            \
                                                                                                 \
     compressed_sparse_matrix_foreach(sp, x_var, index, length, {                                \
         for (__typeof__(x_var) j = index; j < index + length; j++) {                            \
-            (y_var) = indices[j];                                                               \
-            (data_var) = data[j];                                                               \
+            (y_var) = sp->indices->a[j];                                                        \
+            (data_var) = sp->data->a[j];                                                        \
             code;                                                                               \
         }                                                                                       \
     })                                                                                          \
@@ -105,6 +103,14 @@ typedef enum {
 #error "SPARSE_ORIENTATION must be defined"
 #endif
 
+#if (SPARSE_ORIENTATION == row)
+#define SPARSE_INVERSE_ORIENTATION col
+#elif (SPARSE_ORIENTATION == col)
+#define SPARSE_INVERSE_ORIENTATION row
+#else
+#error "SPARSE_ORIENTATION must be row or col"
+#endif
+
 #ifndef SPARSE_DATA_TYPE
 #error "SPARSE_DATA_TYPE must be defined"
 #endif
@@ -120,7 +126,10 @@ typedef enum {
 #define SPARSE_COMPRESSED_CONCAT3(a, b, c) SPARSE_COMPRESSED_CONCAT3_(a, b, c)
 #define SPARSE_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME, _##name)
 #define SPARSE_TYPE_NAME_ORIENTATION SPARSE_COMPRESSED_CONCAT3(SPARSE_TYPE_NAME, _, SPARSE_ORIENTATION)
-#define SPARSE_INDICES_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME_ORIENTATION, s_##name)
+#define SPARSE_TYPE_NAME_INVERSE_ORIENTATION SPARSE_COMPRESSED_CONCAT3(SPARSE_TYPE_NAME, _, SPARSE_INVERSE_ORIENTATION)
+#define SPARSE_INDICES_NAME SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME_ORIENTATION, s)
+#define SPARSE_INDICES_INVERSE_NAME SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME_INVERSE_ORIENTATION, s)
+#define SPARSE_INDICES_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_INDICES_NAME, _##name)
 #define SPARSE_ORIENTATION_FUNC(name) SPARSE_COMPRESSED_CONCAT3(SPARSE_TYPE_NAME, _##name##_, SPARSE_ORIENTATION)
 
 #ifndef SPARSE_HASH_TYPE
@@ -162,6 +171,7 @@ typedef struct {
     SPARSE_INDEX_ARRAY_TYPE *indptr;
     SPARSE_INDEX_ARRAY_TYPE *indices;
     SPARSE_DATA_ARRAY_TYPE *data;
+    size_t max_nnz;
 } SPARSE_TYPE_NAME;
 
 
@@ -188,6 +198,7 @@ static inline SPARSE_TYPE_NAME *SPARSE_FUNC(new_shape)(SPARSE_INDEX_TYPE m, SPAR
     if (sp == NULL) return NULL;
     sp->m = m;
     sp->n = n;
+    sp->max_nnz = 0;
     sp->indptr = INDEX_ARRAY_FUNC(new_size)(m + 1);
     if (sp->indptr == NULL) {
         goto exit_sparse_allocated;
@@ -229,22 +240,37 @@ static inline void SPARSE_ORIENTATION_FUNC(finalize)(SPARSE_TYPE_NAME *self) {
     if (self->indptr->n > self->m + 1) {
         self->m++;
     }
+    SPARSE_INDEX_TYPE ind_len = self->indptr->a[self->m] - self->indptr->a[self->m - 1];
+    if (ind_len > self->max_nnz) {
+        self->max_nnz = ind_len;
+    }
 }
 
-static inline SPARSE_INDEX_TYPE SPARSE_FUNC(rows)(SPARSE_TYPE_NAME *self) {
+// rows for CSR, cols for CSC
+static inline SPARSE_INDEX_TYPE SPARSE_INDICES_NAME(SPARSE_TYPE_NAME *self) {
     return self->m;
 }
 
-static inline SPARSE_INDEX_TYPE SPARSE_FUNC(cols)(SPARSE_TYPE_NAME *self) {
+
+// cols for CSR, rows for CSC
+static inline SPARSE_INDEX_TYPE SPARSE_INDICES_INVERSE_NAME(SPARSE_TYPE_NAME *self) {
     return self->n;
 }
 
-static inline SPARSE_INDEX_TYPE SPARSE_FUNC(nnz)(SPARSE_TYPE_NAME *self) {
+// nonzero elements overall (this assumes no deletions)
+static inline SPARSE_INDEX_TYPE SPARSE_FUNC(nonzeros)(SPARSE_TYPE_NAME *self) {
     return self->data->n;
 }
 
+// row nonzero elements for CSR, col nonzero elements for CSC
+static inline SPARSE_INDEX_TYPE SPARSE_ORIENTATION_FUNC(nonzeros)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE ind) {
+    if (ind > self->m) return 0;
+    return self->indptr->a[ind + 1] - self->indptr->a[ind];
+}
+
+
 static inline SPARSE_INDEX_TYPE SPARSE_ORIENTATION_FUNC(len)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE ind) {
-    if (ind >= self->m) return 0;
+    if (ind > self->m) return 0;
     return self->indptr->a[ind + 1] - self->indptr->a[ind];
 }
 
@@ -255,10 +281,22 @@ static inline void SPARSE_FUNC(append)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE
 }
 
 static inline void SPARSE_ORIENTATION_FUNC(append)(SPARSE_TYPE_NAME *self, SPARSE_INDEX_TYPE *indices, SPARSE_DATA_TYPE *values, SPARSE_INDEX_TYPE n) {
-    for (SPARSE_INDEX_TYPE i = 0; i < n; i++) {
-        SPARSE_FUNC(append)(self, indices[i], values[i]);
-    }
+    INDEX_ARRAY_FUNC(extend)(self->indices, indices, n);
+    DATA_ARRAY_FUNC(extend)(self->data, values, n);
+    SPARSE_INDEX_TYPE max_index = INDEX_VECTOR_FUNC(max)(indices, n);
+    if (max_index >= self->n) self->n = max_index + 1;
     SPARSE_ORIENTATION_FUNC(finalize)(self);
+}
+
+static inline void SPARSE_FUNC(concat)(SPARSE_TYPE_NAME *self, SPARSE_TYPE_NAME *other) {
+    SPARSE_ORIENTATION_FUNC(append)(self, other->indices->a, other->data->a, other->data->n);
+    if (other->n > self->n) self->n = other->n;
+    size_t ind = self->indptr->a[self->m - 1];
+    for (SPARSE_INDEX_TYPE i = 0; i < other->m; i++) {
+        INDEX_ARRAY_FUNC(push)(self->indptr, ind);
+        size_t ind_len = SPARSE_ORIENTATION_FUNC(len)(other, i);
+        ind += ind_len;
+    }
 }
 
 #define SPARSE_INDEX_VALUE_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME, _index_value)
@@ -278,13 +316,8 @@ typedef struct {
 static inline void SPARSE_FUNC(sort_indices)(SPARSE_TYPE_NAME *self) {
     SPARSE_INDEX_TYPE x, ind_start, ind_len;
 
-    size_t max_len = 0;
-    for (size_t i = 0; i < self->m; i++) {
-        size_t len = self->indptr->a[i+1] - self->indptr->a[i];
-        if (len > max_len) max_len = len;
-    }
-
-    SPARSE_INDEX_VALUE_TYPE *tmp_index_values = malloc(sizeof(SPARSE_INDEX_VALUE_TYPE) * max_len);
+    size_t max_nnz = self->max_nnz;
+    SPARSE_INDEX_VALUE_TYPE *tmp_index_values = malloc(sizeof(SPARSE_INDEX_VALUE_TYPE) * max_nnz);
 
     compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {
         for (size_t j = 0; j < ind_len; j++) {
@@ -385,6 +418,7 @@ static inline bool SPARSE_FUNC(dot_sparse)(
     }
     c->m = a_rows;
     c->n = b_cols;
+    c->max_nnz = 0;
 
     SPARSE_INDEX_TYPE nnz = 0;
 
@@ -617,12 +651,17 @@ static inline bool SPARSE_FUNC(write)(SPARSE_TYPE_NAME *self, FILE *f) {
 #define SPARSE_HEAP_TYPE_DEFINED
 #endif
 
+#undef SPARSE_INVERSE_ORIENTATION
+
 #undef SPARSE_COMPRESSED_CONCAT_
 #undef SPARSE_COMPRESSED_CONCAT
 #undef SPARSE_COMPRESSED_CONCAT3_
 #undef SPARSE_COMPRESSED_CONCAT3
 #undef SPARSE_FUNC
 #undef SPARSE_TYPE_NAME_ORIENTATION
+#undef SPARSE_TYPE_NAME_INVERSE_ORIENTATION
+#undef SPARSE_INDICES_NAME
+#undef SPARSE_INDICES_INVERSE_NAME
 #undef SPARSE_INDICES_FUNC
 #undef SPARSE_ORIENTATION_FUNC
 
