@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <float.h>
 
 #include "greatest/greatest.h"
 #include "float_csr.h"
@@ -9,7 +10,7 @@
 TEST test_float_csr(void) {
     float_csr *sp = float_csr_new();
     uint32_t indices_1[] = {0, 1, 2, 3};
-    float values_1[] = {1.0, 1.0, 1.0, 1.0};
+    float values_1[] = {1.0f, 1.0f, 1.0f, 1.0f};
     float_csr_append_row(sp, (uint32_t *)indices_1, (float *)values_1, sizeof(indices_1) / sizeof(uint32_t));
 
     ASSERT_EQ(sp->m, 1);
@@ -21,7 +22,7 @@ TEST test_float_csr(void) {
     }
 
     uint32_t indices_2[] = {1, 4, 5};
-    float values_2[] = {1.0, 1.0, 1.0};
+    float values_2[] = {1.0f, 1.0f, 1.0f};
 
     float_csr_append_row(sp, indices_2, values_2, sizeof(indices_2) / sizeof(uint32_t));
 
@@ -37,10 +38,10 @@ TEST test_float_csr(void) {
         ASSERT_EQ(sp->data->a[i], values_2[i - 4]);
     }
 
-    float_csr_append(sp, 4, 1.0);
-    float_csr_append(sp, 5, 1.0);
-    float_csr_append(sp, 6, 1.0);
-    float_csr_append(sp, 7, 1.0);
+    float_csr_append(sp, 4, 1.0f);
+    float_csr_append(sp, 5, 1.0f);
+    float_csr_append(sp, 6, 1.0f);
+    float_csr_append(sp, 7, 1.0f);
 
     float_csr_finalize_row(sp);
 
@@ -49,36 +50,36 @@ TEST test_float_csr(void) {
 
     float_array *vec = float_array_new_size(sp->n);
     for (size_t i = 0; i < sp->n; i++) {
-        float_array_push(vec, 1.0);
+        float_array_push(vec, 1.0f);
     }
 
     float_array *res = float_array_new_size(sp->m);
     float_csr_dot_vector(sp, vec->a, vec->n, res->a, sp->m);
     uint32_t row = 0, row_start = 0, row_len = 0;
     compressed_sparse_matrix_foreach(sp, row, row_start, row_len, {
-        ASSERT_EQ(res->a[row], row_len * 1.0);
+        ASSERT_EQ(res->a[row], row_len * 1.0f);
     })
 
     size_t num_rows = 2;
     uint32_t rows[] = {0, 2};
-    float sparse_result[] = {0.0, 0.0};
+    float sparse_result[] = {0.0f, 0.0f};
     ASSERT(float_csr_rows_dot_vector(sp, rows, num_rows, vec->a, vec->n, sparse_result, num_rows));
     for (size_t i = 0; i < num_rows; i++) {
         uint32_t row = rows[i];
         uint32_t row_len = float_csr_len_row(sp, row);
-        ASSERT_EQ(sparse_result[i], row_len * 1.0);
+        ASSERT_EQ(sparse_result[i], row_len * 1.0f);
     }
 
     float_csr *sp2 = float_csr_new();
 
-    float_csr_append_row(sp2, (uint32_t[]){0}, (float[]){3.0}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){5.0}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){2.0}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){0, 1},(float[]) {3.0, 5.0}, 2);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){8.0}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){0}, (float[]){4.0}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){0, 1}, (float[]){1.0, 2.0}, 2);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){7.0}, 1);
+    float_csr_append_row(sp2, (uint32_t[]){0}, (float[]){3.0f}, 1);
+    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){5.0f}, 1);
+    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){2.0f}, 1);
+    float_csr_append_row(sp2, (uint32_t[]){0, 1},(float[]) {3.0f, 5.0f}, 2);
+    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){8.0f}, 1);
+    float_csr_append_row(sp2, (uint32_t[]){0}, (float[]){4.0f}, 1);
+    float_csr_append_row(sp2, (uint32_t[]){0, 1}, (float[]){1.0f, 2.0f}, 2);
+    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){7.0f}, 1);
 
     float_csr *sp_prod_sp2 = float_csr_new();
 
@@ -89,11 +90,11 @@ TEST test_float_csr(void) {
 
     row = 0;
     uint32_t col = 0;
-    float data = 0.0;
+    float data = 0.0f;
 
     uint32_t expected_indptr[] = {0, 2, 4, 6};
     uint32_t expected_indices[] = {0, 1, 0, 1, 0, 1};
-    float expected_data[] = {6.0, 12.0, 4.0, 13.0, 5.0, 17.0};
+    float expected_data[] = {6.0f, 12.0f, 4.0f, 13.0f, 5.0f, 17.0f};
 
     size_t indptr_size = sizeof(expected_indptr) / sizeof(uint32_t);
     size_t indices_size = sizeof(expected_indices) / sizeof(uint32_t);
@@ -106,7 +107,7 @@ TEST test_float_csr(void) {
         ASSERT_EQ(sp_prod_sp2->indices->a[i], expected_indices[i]);
     }
     for (size_t i = 0; i < data_size; i++) {
-        ASSERT_EQ(sp_prod_sp2->data->a[i], expected_data[i]);
+        ASSERT_IN_RANGE(sp_prod_sp2->data->a[i] - expected_data[i], 0.0f, FLT_EPSILON);
     }
 
     float_array_destroy(vec);
