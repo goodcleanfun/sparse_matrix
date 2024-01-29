@@ -1,9 +1,13 @@
 # sparse
-Generic dynamic sparse matrices in CSR (compressed sparse row) format.
+Generic dynamic sparse matrices in CSR (compressed sparse row) or CSC (compressed sparse column) format.
 
-Implements an efficient sparse matrix multiply which uses a hash table and a heap instead of an N-vector.
+## Dynamic construction
+While the CSR/CSC format does not allow rows/columns to arrive at random, it can be constructed incrementally using dynamic arrays and appending one row/column at a time.
 
-## General sparse matrix multiplication
+## Memory-efficient sparse matrix multiplication
+Implements an efficient sparse matrix multiply which uses a hash table and a heap instead of an N-vector to accumulate the results.
+
+### Sparse matrix dot product: the general method
 Typically, a sparse dot product between two matrices is accomplished using some version of Gustavson's row-wise SpGEMM:
 
 ```
@@ -19,6 +23,7 @@ for a_i in matrix A do
 
 One widely-used implementation is scipy.sparse (sparsetools), which allocates two intermediate vectors of size |N| (the number of columns in the output matrix C i.e. the number of rows in B if B is a CSC matrix). One array, called sums, is used to accumulate the summed values for all columns in the current row, and an array called next which keeps pointers to the next non-zero entry in the sums array. A counter is incremented each time a new column is encountered, the head is set to that new column, and at the end of the row, the algorithm starts at head and follows the pointers to the non-zero sums. At the end of each row, the values then have to be overwritten before the next step.
 
+### A memory-efficient approach
 Instead of storing these two |N| vectors (where N, the number of columns of the matrix, could potentially be quite large, and depending on the structure each row may only need a small subset of the columns), this implementation makes the following observations:
 
 1. the column-wise sums can be accumulated in a hashtable which is cleared (zeroed out without deallocating, so that the memory is reused) after each row and will not grow larger than the max number of non-zero columns in a given row, which in a high-sparsity scenario will tend to be closer to 1 than to |N|. If the indices do not need to be guaranteed sorted, we can just iterate through the hashtable and output the indices and values.
