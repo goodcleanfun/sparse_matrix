@@ -161,8 +161,8 @@ typedef enum {
 #define DATA_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(SPARSE_DATA_TYPE_NAME, _vector, _##name)
 #define INDEX_ARRAY_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_INDEX_ARRAY_TYPE, _##name)
 #define DATA_ARRAY_FUNC(name) SPARSE_COMPRESSED_CONCAT(SPARSE_DATA_ARRAY_TYPE, _##name)
-#define FILE_INDEX_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(name##_, SPARSE_INDEX_TYPE_NAME, _vector)
-#define FILE_DATA_VECTOR_FUNC(name) SPARSE_COMPRESSED_CONCAT3(name##_, SPARSE_DATA_TYPE_NAME, _vector)
+#define FILE_INDEX_ARRAY_FUNC(name) SPARSE_COMPRESSED_CONCAT3(name##_, SPARSE_INDEX_TYPE_NAME, _array)
+#define FILE_DATA_ARRAY_FUNC(name) SPARSE_COMPRESSED_CONCAT3(name##_, SPARSE_DATA_TYPE_NAME, _array)
 
 
 typedef struct {
@@ -517,7 +517,7 @@ static inline SPARSE_TYPE_NAME *SPARSE_FUNC(read)(FILE *f) {
         goto exit_read_sparse_allocated;
     }
 
-    if (!FILE_INDEX_VECTOR_FUNC(file_read)(f, indptr->a, len_indptr)) {
+    if (!FILE_INDEX_ARRAY_FUNC(file_read)(f, indptr->a, len_indptr)) {
         INDEX_ARRAY_FUNC(destroy)(indptr);
         goto exit_read_sparse_allocated;
     }
@@ -536,7 +536,7 @@ static inline SPARSE_TYPE_NAME *SPARSE_FUNC(read)(FILE *f) {
         goto exit_read_sparse_allocated;
     }
 
-    if (!FILE_INDEX_VECTOR_FUNC(file_read)(f, indices->a, len_indices)) {
+    if (!FILE_INDEX_ARRAY_FUNC(file_read)(f, indices->a, len_indices)) {
         INDEX_ARRAY_FUNC(destroy)(indices);
         goto exit_read_sparse_allocated;
     }
@@ -555,7 +555,7 @@ static inline SPARSE_TYPE_NAME *SPARSE_FUNC(read)(FILE *f) {
         goto exit_read_sparse_allocated;
     }
 
-    if (!FILE_DATA_VECTOR_FUNC(file_read)(f, data->a, len_data)) {
+    if (!FILE_DATA_ARRAY_FUNC(file_read)(f, data->a, len_data)) {
         DATA_ARRAY_FUNC(destroy)(data);
         goto exit_read_sparse_allocated;
     }
@@ -586,7 +586,7 @@ static inline bool SPARSE_FUNC(write)(SPARSE_TYPE_NAME *self, FILE *f) {
         return false;
     }
 
-    if (!FILE_INDEX_VECTOR_FUNC(file_write)(f, self->indptr->a, len_indptr)) {
+    if (!FILE_INDEX_ARRAY_FUNC(file_write)(f, self->indptr->a, len_indptr)) {
         return false;
     }
 
@@ -596,7 +596,7 @@ static inline bool SPARSE_FUNC(write)(SPARSE_TYPE_NAME *self, FILE *f) {
         return false;
     }
 
-    if (!FILE_INDEX_VECTOR_FUNC(file_write)(f, self->indices->a, len_indices)) {
+    if (!FILE_INDEX_ARRAY_FUNC(file_write)(f, self->indices->a, len_indices)) {
         return false;
     }
 
@@ -606,7 +606,7 @@ static inline bool SPARSE_FUNC(write)(SPARSE_TYPE_NAME *self, FILE *f) {
         return false;
     }
 
-    if (!FILE_DATA_VECTOR_FUNC(file_write)(f, self->data->a, len_data)) {
+    if (!FILE_DATA_ARRAY_FUNC(file_write)(f, self->data->a, len_data)) {
         return false;
     }
 
@@ -690,5 +690,5 @@ static inline bool SPARSE_FUNC(write)(SPARSE_TYPE_NAME *self, FILE *f) {
 #undef HASH_FUNC
 #undef INDEX_ARRAY_FUNC
 #undef DATA_ARRAY_FUNC
-#undef FILE_INDEX_VECTOR_FUNC
-#undef FILE_DATA_VECTOR_FUNC
+#undef FILE_INDEX_ARRAY_FUNC
+#undef FILE_DATA_ARRAY_FUNC
