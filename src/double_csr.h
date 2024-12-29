@@ -1,10 +1,10 @@
 #ifndef DOUBLE_CSR_MATRIX_H
 #define DOUBLE_CSR_MATRIX_H
 
-#include "num_arrays/double_array.h"
+#include "num_array/double_array.h"
 #include "hashes/uint32_double.h"
-#include "heaps/uint32_minheap.h"
-#include "num_arrays/uint32_array.h"
+#include "heap/uint32_minheap.h"
+#include "num_array/uint32_array.h"
 
 #define SPARSE_TYPE_NAME double_csr
 #define SPARSE_INDEX_TYPE uint32_t
