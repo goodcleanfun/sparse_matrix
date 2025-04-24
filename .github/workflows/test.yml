@@ -23,4 +23,4 @@ jobs:
           make
           sudo make install
       - name: Run tests
-        run: make CFLAGS="-std=gnu11" LDFLAGS="-lm" test
+        run: make CFLAGS="-std=gnu11 -march=x86-64-v3" LDFLAGS="-lm" test
