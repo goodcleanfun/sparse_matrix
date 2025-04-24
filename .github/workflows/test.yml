@@ -23,4 +23,4 @@ jobs:
           make
           sudo make install
       - name: Run tests
-        run: make test
+        run: make CFLAGS="-std=gnu11" test
