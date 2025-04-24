@@ -1,6 +1,6 @@
 {
   "name": "sparse_matrix",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "repo": "goodcleanfun/sparse_matrix",
   "description": "Compressed dynamic sparse matrices with efficient heap-based sparse multiply",
   "keywords": ["matrix", "sparse", "array", "numeric"],
