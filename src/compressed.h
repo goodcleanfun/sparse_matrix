@@ -48,6 +48,7 @@ matrices are efficient.
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "aligned/aligned.h"
 #include "file_utils/file_utils.h"
 
 typedef enum {
@@ -300,16 +301,18 @@ static inline void SPARSE_FUNC(concat)(SPARSE_TYPE_NAME *self, SPARSE_TYPE_NAME 
 }
 
 #define SPARSE_INDEX_VALUE_TYPE SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME, _index_value)
-#define SPARSE_INDEX_VALUE_SORT_FUNC(name) SPARSE_COMPRESSED_CONCAT(name##_, SPARSE_INDEX_VALUE_TYPE)
+#define SPARSE_INDEX_VALUE_SORT_FUNC(func) SPARSE_COMPRESSED_CONCAT(SPARSE_TYPE_NAME, _index_value_##func)
 
 typedef struct {
     SPARSE_INDEX_TYPE index;
     SPARSE_DATA_TYPE value;
 } SPARSE_INDEX_VALUE_TYPE;
 
+#define INTROSORT_NAME SPARSE_INDEX_VALUE_TYPE
 #define INTROSORT_TYPE SPARSE_INDEX_VALUE_TYPE
 #define INTROSORT_LT(a, b) ((a).index < (b).index)
-#include "sorting/introsort.h"
+#include "sort/introsort.h"
+#undef INTROSORT_NAME
 #undef INTROSORT_TYPE
 #undef INTROSORT_LT
 
@@ -317,7 +320,8 @@ static inline void SPARSE_FUNC(sort_indices)(SPARSE_TYPE_NAME *self) {
     SPARSE_INDEX_TYPE x, ind_start, ind_len;
 
     size_t max_nnz = self->max_nnz;
-    SPARSE_INDEX_VALUE_TYPE *tmp_index_values = malloc(sizeof(SPARSE_INDEX_VALUE_TYPE) * max_nnz);
+
+    SPARSE_INDEX_VALUE_TYPE *tmp_index_values = cache_line_aligned_malloc(max_nnz * sizeof(SPARSE_INDEX_VALUE_TYPE));
 
     compressed_sparse_matrix_foreach(self, x, ind_start, ind_len, {
         for (size_t j = 0; j < ind_len; j++) {
