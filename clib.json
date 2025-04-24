@@ -5,11 +5,11 @@
   "description": "Compressed dynamic sparse matrices with efficient heap-based sparse multiply",
   "keywords": ["matrix", "sparse", "array", "numeric"],
   "dependencies": {
-    "goodcleanfun/vector_ops": "*",
+    "goodcleanfun/vectorized": "*",
     "goodcleanfun/file_utils": "*",
     "goodcleanfun/hashes": "*",
     "goodcleanfun/heap": "*",
-    "goodcleanfun/sorting": "*",
+    "goodcleanfun/sort": "*",
     "goodcleanfun/num_array": "*"
   },
   "development": {
