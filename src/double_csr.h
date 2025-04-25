@@ -6,7 +6,7 @@
 #include "heap/uint32_minheap.h"
 #include "num_array/uint32_array.h"
 
-#define SPARSE_TYPE_NAME double_csr
+#define SPARSE_TYPE_NAME double_csr_matrix
 #define SPARSE_INDEX_TYPE uint32_t
 #define SPARSE_INDEX_TYPE_NAME uint32
 #define SPARSE_ORIENTATION row

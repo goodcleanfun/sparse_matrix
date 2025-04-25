@@ -7,11 +7,11 @@
 #include "greatest/greatest.h"
 #include "float_csr.h"
 
-TEST test_float_csr(void) {
-    float_csr *sp = float_csr_new();
+TEST test_float_csr_matrix(void) {
+    float_csr_matrix *sp = float_csr_matrix_new();
     uint32_t indices_1[] = {0, 1, 2, 3};
     float values_1[] = {1.0f, 1.0f, 1.0f, 1.0f};
-    float_csr_append_row(sp, (uint32_t *)indices_1, (float *)values_1, sizeof(indices_1) / sizeof(uint32_t));
+    float_csr_matrix_append_row(sp, (uint32_t *)indices_1, (float *)values_1, sizeof(indices_1) / sizeof(uint32_t));
 
     ASSERT_EQ(sp->m, 1);
     ASSERT_EQ(sp->n, 4);
@@ -24,12 +24,12 @@ TEST test_float_csr(void) {
     uint32_t indices_2[] = {1, 4, 5};
     float values_2[] = {1.0f, 1.0f, 1.0f};
 
-    float_csr_append_row(sp, indices_2, values_2, sizeof(indices_2) / sizeof(uint32_t));
+    float_csr_matrix_append_row(sp, indices_2, values_2, sizeof(indices_2) / sizeof(uint32_t));
 
     ASSERT_EQ(sp->m, 2);
-    ASSERT_EQ(float_csr_rows(sp), 2);
+    ASSERT_EQ(float_csr_matrix_rows(sp), 2);
     ASSERT_EQ(sp->n, 6);
-    ASSERT_EQ(float_csr_cols(sp), 6);
+    ASSERT_EQ(float_csr_matrix_cols(sp), 6);
     ASSERT_EQ(sp->max_nnz, 4);
     ASSERT_EQ(sp->indices->n, 7);
     ASSERT_EQ(sp->data->n, 7);
@@ -38,12 +38,12 @@ TEST test_float_csr(void) {
         ASSERT_EQ(sp->data->a[i], values_2[i - 4]);
     }
 
-    float_csr_append(sp, 4, 1.0f);
-    float_csr_append(sp, 5, 1.0f);
-    float_csr_append(sp, 6, 1.0f);
-    float_csr_append(sp, 7, 1.0f);
+    float_csr_matrix_append(sp, 4, 1.0f);
+    float_csr_matrix_append(sp, 5, 1.0f);
+    float_csr_matrix_append(sp, 6, 1.0f);
+    float_csr_matrix_append(sp, 7, 1.0f);
 
-    float_csr_finalize_row(sp);
+    float_csr_matrix_finalize_row(sp);
 
     ASSERT_EQ(sp->m, 3);
     ASSERT_EQ(sp->n, 8);
@@ -54,7 +54,7 @@ TEST test_float_csr(void) {
     }
 
     float_array *res = float_array_new_size(sp->m);
-    float_csr_dot_vector(sp, vec->a, vec->n, res->a, sp->m);
+    float_csr_matrix_dot_vector(sp, vec->a, vec->n, res->a, sp->m);
     uint32_t row = 0, row_start = 0, row_len = 0;
     compressed_sparse_matrix_foreach(sp, row, row_start, row_len, {
         ASSERT_EQ(res->a[row], row_len * 1.0f);
@@ -63,27 +63,27 @@ TEST test_float_csr(void) {
     size_t num_rows = 2;
     uint32_t rows[] = {0, 2};
     float sparse_result[] = {0.0f, 0.0f};
-    ASSERT(float_csr_rows_dot_vector(sp, rows, num_rows, vec->a, vec->n, sparse_result, num_rows));
+    ASSERT(float_csr_matrix_rows_dot_vector(sp, rows, num_rows, vec->a, vec->n, sparse_result, num_rows));
     for (size_t i = 0; i < num_rows; i++) {
         uint32_t row = rows[i];
-        uint32_t row_len = float_csr_len_row(sp, row);
+        uint32_t row_len = float_csr_matrix_len_row(sp, row);
         ASSERT_EQ(sparse_result[i], row_len * 1.0f);
     }
 
-    float_csr *sp2 = float_csr_new();
+    float_csr_matrix *sp2 = float_csr_matrix_new();
 
-    float_csr_append_row(sp2, (uint32_t[]){0}, (float[]){3.0f}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){5.0f}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){2.0f}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){0, 1},(float[]) {3.0f, 5.0f}, 2);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){8.0f}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){0}, (float[]){4.0f}, 1);
-    float_csr_append_row(sp2, (uint32_t[]){0, 1}, (float[]){1.0f, 2.0f}, 2);
-    float_csr_append_row(sp2, (uint32_t[]){1}, (float[]){7.0f}, 1);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){0}, (float[]){3.0f}, 1);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){1}, (float[]){5.0f}, 1);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){1}, (float[]){2.0f}, 1);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){0, 1},(float[]) {3.0f, 5.0f}, 2);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){1}, (float[]){8.0f}, 1);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){0}, (float[]){4.0f}, 1);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){0, 1}, (float[]){1.0f, 2.0f}, 2);
+    float_csr_matrix_append_row(sp2, (uint32_t[]){1}, (float[]){7.0f}, 1);
 
-    float_csr *sp_prod_sp2 = float_csr_new();
+    float_csr_matrix *sp_prod_sp2 = float_csr_matrix_new();
 
-    ASSERT(float_csr_dot_sparse(sp, sp2, sp_prod_sp2, false));
+    ASSERT(float_csr_matrix_dot_sparse(sp, sp2, sp_prod_sp2, false));
 
     ASSERT_EQ(sp_prod_sp2->m, 3);
     ASSERT_EQ(sp_prod_sp2->n, 2);
@@ -112,7 +112,9 @@ TEST test_float_csr(void) {
 
     float_array_destroy(vec);
     float_array_destroy(res);
-    float_csr_destroy(sp);
+    float_csr_matrix_destroy(sp);
+    float_csr_matrix_destroy(sp2);
+    float_csr_matrix_destroy(sp_prod_sp2);
 
     PASS();
 }
@@ -123,7 +125,7 @@ GREATEST_MAIN_DEFS();
 int main(int argc, char **argv) {
     GREATEST_MAIN_BEGIN();      /* command-line options, initialization. */
 
-    RUN_TEST(test_float_csr);
+    RUN_TEST(test_float_csr_matrix);
 
     GREATEST_MAIN_END();        /* display results */
 }
