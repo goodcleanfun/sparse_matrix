@@ -21,4 +21,14 @@
 #undef SPARSE_DATA_TYPE
 #undef SPARSE_DATA_ARRAY_TYPE
 
+static inline bool float_csr_matrix_log(float_csr *self) {
+    float_array_log(self->data);
+    return true;
+}
+
+static inline bool float_csr_matrix_exp(float_csr *self) {
+    float_array_exp(self->data);
+    return true;
+}
+
 #endif
